@@ -1,94 +1,66 @@
 clear;
 clc;
 
-%Il filtro filtra abbastanza?
+%% Loading data
 S = load('es1_emg/ES1_emg.mat');
-bpfilt = designfilt("bandpassfir", ...
-    FilterOrder=2,CutoffFrequency1=30, ...
-    CutoffFrequency2=450,SampleRate=1500);
-figure(6);
-freqz(bpfilt);
+
+%% Raw EMG
 raw_emg = S.Es1_emg.matrix(:,1)';
+
+%% Filtered EMG
+% Sample rate should be equal to sampling frequency (2000 or 1500?)
+bpfilt = designfilt("bandpassfir", ...
+    FilterOrder=100,CutoffFrequency1=30, ...
+    CutoffFrequency2=450,SampleRate=2000);
 filtered_emg = filtfilt(bpfilt, raw_emg);
+
+%% Rectified EMG
 rectified_emg = abs(filtered_emg);
 
-% num = bpfilt.Numerator;
-% disp("[" );
-% for i = num
-%     disp(i);
-% end
-% 
-% disp("]");
+%% Linear envelope
+Fs = 2000;
+LP = 5;
+Wp = LP / (Fs/2);
+[b, a] = butter(2, Wp, 'low');
+lin_env_emg = filtfilt(b, a, rectified_emg);
 
-%figure(1);
-%plot(raw_emg);
-%hold on;
-%plot(filtered_emg);
-%hold off;
-
-%va bene che il linear envelope sia 6 volte più piccolo in modulo?
-LP = 4;
-Wp = LP / 1000;
-[F,E] = butter(2,Wp,"low");
-lin_env_emg = filtfilt(F, E,rectified_emg);
-
+%% Downsampling
 downsampled_emg = downsample(lin_env_emg, 100);
 
-% figure(2);
-% plot(rectified_emg);
-% hold on;
-% plot(lin_env_emg);
-% hold off;
-% 
-% 
-% figure(3);
-% subplot(2, 3, 1);
-% plot(raw_emg);
-% title("Raw");
-% 
-% subplot(2, 3, 2);
-% plot(filtered_emg);
-% title("Filtered");
-% 
-% subplot(2, 3, 3);
-% plot(rectified_emg);
-% title("Rectified");
-% 
-% subplot(2, 3, 4);
-% plot(lin_env_emg);
-% title("Linear Envelope");
-% 
-% subplot(2, 3, 5);
-% plot(downsampled_emg);
-% title("Downsampled");
-% 
-% figure(4);
-% plot(lin_env_emg/100);
-% hold on;
-% plot(S.Es1_emg.matrix(:,2:4));
+%% Computing acceleration for movement signal
+acc_data = S.Es1_emg.matrix(:,2:4);
+atot = sqrt(sum(acc_data.^2, 2));
 
-% 
-% legend(S.Es1_emg.labels);
+%% Plots
+figure(1);
 
-%Va bene questo modo di calcolare a tot?
-% figure(5);
-% a = S.Es1_emg.matrix(:,2:4);
-% atot = sqrt(a(:,1).^2 + a(:,2).^2 + a(:,3).^2);
-% plot(atot);
-% hold on;
-% plot(lin_env_emg/100);
+subplot(2,2,1);
+plot(raw_emg);
+hold on;
+plot(filtered_emg);
+hold off;
+title("Raw EMG overlaid with filtered signal");
 
-% Question A: Why is the down-sampling performed after the envelope computation?
-% 
+subplot(2,2,2);
+plot(rectified_emg);
+hold on;
+plot(lin_env_emg);
+hold off;
+title("Rectified EMG overlaid with the envelope");
+
+subplot(2,2,3);
+plot(atot);
+hold on;
+plot(lin_env_emg/100);
+title("Movement signal overlaid with the envelope signal");
+
+%% Question A: Why is the down-sampling performed after the envelope computation?
 % The downslamping loses information, so it's better to first calculate the 
-% linear envelope and then downsample; moreover before downsample some
-% frequencies needs to be removed, otherwise remains too much noise.
+% linear envelope and then downsample; moreover before downsampling, some
+% frequencies needs to be removed, otherwise too much noise remains.
 
-% Question B: Based on the motion signal, when does the muscle activation 
-% commence in relation to the movement?
-%
-% When the muscle activates the acceleration decreases
-
+%% Question B: Based on the motion signal, when does the muscle activation commence in relation to the movement?
+% The muscle activates when the acceleration start decreasing. 
 
 
 
