@@ -2,13 +2,12 @@ clear;
 clc;
 
 %% Loading data
-S = load('es1_emg/ES1_emg.mat');
+S = load('ES1_emg.mat');
 
 %% Raw EMG
 raw_emg = S.Es1_emg.matrix(:,1)';
 
 %% Filtered EMG
-% Sample rate should be equal to sampling frequency (2000 or 1500?)
 bpfilt = designfilt("bandpassfir", ...
     FilterOrder=100,CutoffFrequency1=30, ...
     CutoffFrequency2=450,SampleRate=2000);
@@ -61,7 +60,3 @@ title("Movement signal overlaid with the envelope signal");
 
 %% Question B: Based on the motion signal, when does the muscle activation commence in relation to the movement?
 % The muscle activates when the acceleration start decreasing. 
-
-
-
-
